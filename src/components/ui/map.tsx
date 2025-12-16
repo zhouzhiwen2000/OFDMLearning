@@ -114,7 +114,7 @@ option?: {
 };
 }) => {
 const mapRef = useRef<HTMLDivElement>(null);
-const currentRef = useRef(null);
+const currentRef = useRef<any>(null);
 
 const _options = useMemo(() => {
     return { ...defaultOption, ...option };
