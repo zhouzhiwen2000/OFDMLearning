@@ -138,6 +138,8 @@ const initMap = useCallback(() => {
     currentRef.current = map;
     }
 
+    if (!map) return;
+
     // Clear overlays
     map.clearOverlays();
 

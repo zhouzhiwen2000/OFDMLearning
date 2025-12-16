@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/types';
 
 export async function getProfile(userId: string): Promise<Profile | null> {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -46,6 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -54,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
     // In this function, do NOT use any await calls. Use `.then()` instead to avoid deadlocks.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         getProfile(session.user.id).then(setProfile);
@@ -68,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithUsername = async (username: string, password: string) => {
     try {
+      if (!supabase) throw new Error('Supabase not initialized');
       const email = `${username}@miaoda.com`;
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -83,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUpWithUsername = async (username: string, password: string) => {
     try {
+      if (!supabase) throw new Error('Supabase not initialized');
       const email = `${username}@miaoda.com`;
       const { error } = await supabase.auth.signUp({
         email,
@@ -97,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);

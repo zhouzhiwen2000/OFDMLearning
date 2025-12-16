@@ -62,7 +62,7 @@ export default function OFDMSimulator() {
     );
 
     // 更新多径参数
-    const newPaths = [];
+    const newPaths: { delay: number; gain: number; phase: number }[] = [];
     for (let i = 0; i < multipathParams.numPaths; i++) {
       newPaths.push({
         delay: Math.round(randomChannel.delays[i] || 0),

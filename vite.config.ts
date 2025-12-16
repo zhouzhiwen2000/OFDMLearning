@@ -9,7 +9,7 @@ export default defineConfig({
   base: "./",
   plugins: [
     react(),
-    miaodaDevPlugin(),
+    miaodaDevPlugin() as any,
     svgr({
       svgrOptions: {
         icon: true,
