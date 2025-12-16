@@ -125,12 +125,12 @@ export function ParameterPanel({
                 onValueChange={([value]) =>
                   onParametersChange({ ...parameters, pilotSpacing: value })
                 }
-                min={4}
-                max={16}
-                step={2}
+                min={1}
+                max={parameters.numSubcarriers}
+                step={1}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground">范围: 4 - 16</p>
+              <p className="text-xs text-muted-foreground">范围: 1 - {parameters.numSubcarriers}</p>
             </div>
 
             {/* 导频功率 */}

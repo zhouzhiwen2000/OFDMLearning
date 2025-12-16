@@ -9,12 +9,14 @@ import type { Complex } from '@/utils/ofdm';
 interface ConstellationChartProps {
   transmittedSymbols: Complex[];
   receivedSymbols?: Complex[];
+  pilotIndices?: number[];
   title?: string;
 }
 
 export function ConstellationChart({
   transmittedSymbols,
   receivedSymbols,
+  pilotIndices = [],
   title = '星座图',
 }: ConstellationChartProps) {
   // 转换发送符号数据
@@ -22,7 +24,11 @@ export function ConstellationChart({
     real: symbol.real,
     imag: symbol.imag,
     index,
+    isPilot: pilotIndices.includes(index),
   }));
+
+  const txPilots = txData.filter(d => d.isPilot);
+  const txDataSymbols = txData.filter(d => !d.isPilot);
 
   // 转换接收符号数据
   const rxData = receivedSymbols?.map((symbol, index) => ({
@@ -76,10 +82,16 @@ export function ConstellationChart({
               />
             )}
             <Scatter
-              name="发送符号"
-              data={txData}
+              name="发送数据"
+              data={txDataSymbols}
               fill="hsl(var(--primary))"
               shape="cross"
+            />
+            <Scatter
+              name="发送导频"
+              data={txPilots}
+              fill="hsl(var(--chart-2))"
+              shape="diamond"
             />
           </ScatterChart>
         </ResponsiveContainer>

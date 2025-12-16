@@ -9,6 +9,7 @@ import { ParameterPanel } from '@/components/ofdm/ParameterPanel';
 import { ConstellationChart } from '@/components/ofdm/ConstellationChart';
 import { SignalChart } from '@/components/ofdm/SignalChart';
 import { ChannelResponseChart } from '@/components/ofdm/ChannelResponseChart';
+import { SubcarrierDistribution } from '@/components/ofdm/SubcarrierDistribution';
 import type { OFDMParameters, MultipathParameters, SimulationResult } from '@/types/ofdm';
 import {
   Complex,
@@ -53,6 +54,8 @@ export default function OFDMSimulator() {
 
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  const pilotIndices = Array.from({ length: parameters.numSubcarriers }, (_, i) => i).filter(i => i % parameters.pilotSpacing === 0);
 
   // 随机生成多径参数（按钮触发）
   const randomizeChannel = useCallback(() => {
@@ -268,15 +271,23 @@ export default function OFDMSimulator() {
                   </CardContent>
                 </Card>
 
+                {/* 子载波分布 */}
+                <SubcarrierDistribution
+                  numSubcarriers={parameters.numSubcarriers}
+                  pilotSpacing={parameters.pilotSpacing}
+                />
+
                 {/* 星座图对比 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <ConstellationChart
                     transmittedSymbols={result.transmittedSymbols}
+                    pilotIndices={pilotIndices}
                     title="发送端星座图"
                   />
                   <ConstellationChart
                     transmittedSymbols={result.transmittedSymbols}
                     receivedSymbols={result.receivedSymbols}
+                    pilotIndices={pilotIndices}
                     title="接收端星座图对比"
                   />
                 </div>
@@ -287,7 +298,7 @@ export default function OFDMSimulator() {
                     signal={result.timeSignal}
                     title="时域信号"
                     xLabel="时间采样点"
-                    showMagnitude={true}
+                    showMagnitude={false}
                     showReal={true}
                     showImag={true}
                   />
@@ -295,7 +306,9 @@ export default function OFDMSimulator() {
                     signal={result.freqSignal}
                     title="频域信号（子载波）"
                     xLabel="子载波索引"
-                    showMagnitude={true}
+                    showMagnitude={false}
+                    showReal={true}
+                    showImag={true}
                   />
                 </div>
 
