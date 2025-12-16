@@ -10,6 +10,58 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { OFDMParameters, MultipathParameters } from '@/types/ofdm';
 
+interface SliderWithButtonsProps {
+  value: number;
+  onValueChange: (value: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  className?: string;
+}
+
+function SliderWithButtons({ value, onValueChange, min, max, step, className }: SliderWithButtonsProps) {
+  const handleDecrement = () => {
+    const newValue = Math.max(min, Number((value - step).toFixed(2)));
+    onValueChange(newValue);
+  };
+
+  const handleIncrement = () => {
+    const newValue = Math.min(max, Number((value + step).toFixed(2)));
+    onValueChange(newValue);
+  };
+
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={handleDecrement}
+        disabled={value <= min}
+      >
+        -
+      </Button>
+      <Slider
+        value={[value]}
+        onValueChange={([v]) => onValueChange(v)}
+        min={min}
+        max={max}
+        step={step}
+        className="flex-1"
+      />
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={handleIncrement}
+        disabled={value >= max}
+      >
+        +
+      </Button>
+    </div>
+  );
+}
+
 interface ParameterPanelProps {
   parameters: OFDMParameters;
   multipathParams: MultipathParameters;
@@ -79,9 +131,9 @@ export function ParameterPanel({
                 <Label>循环前缀长度</Label>
                 <span className="text-sm text-muted-foreground">{parameters.cpLength}</span>
               </div>
-              <Slider
-                value={[parameters.cpLength]}
-                onValueChange={([value]) =>
+              <SliderWithButtons
+                value={parameters.cpLength}
+                onValueChange={(value) =>
                   onParametersChange({ ...parameters, cpLength: value })
                 }
                 min={0}
@@ -120,17 +172,24 @@ export function ParameterPanel({
                 <Label>导频间隔</Label>
                 <span className="text-sm text-muted-foreground">{parameters.pilotSpacing}</span>
               </div>
-              <Slider
-                value={[parameters.pilotSpacing]}
-                onValueChange={([value]) =>
-                  onParametersChange({ ...parameters, pilotSpacing: value })
+              <Select
+                value={parameters.pilotSpacing.toString()}
+                onValueChange={(value) =>
+                  onParametersChange({ ...parameters, pilotSpacing: parseInt(value) })
                 }
-                min={1}
-                max={parameters.numSubcarriers}
-                step={1}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">范围: 1 - {parameters.numSubcarriers}</p>
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: Math.log2(parameters.numSubcarriers) + 1 }, (_, i) => Math.pow(2, i)).map((n) => (
+                    <SelectItem key={n} value={n.toString()}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">范围: 1 - {parameters.numSubcarriers} (2的指数)</p>
             </div>
 
             {/* 导频功率 */}
@@ -139,9 +198,9 @@ export function ParameterPanel({
                 <Label>导频功率</Label>
                 <span className="text-sm text-muted-foreground">{parameters.pilotPower.toFixed(1)}</span>
               </div>
-              <Slider
-                value={[parameters.pilotPower]}
-                onValueChange={([value]) =>
+              <SliderWithButtons
+                value={parameters.pilotPower}
+                onValueChange={(value) =>
                   onParametersChange({ ...parameters, pilotPower: value })
                 }
                 min={0.5}
@@ -158,9 +217,9 @@ export function ParameterPanel({
                 <Label>信噪比 (SNR)</Label>
                 <span className="text-sm text-muted-foreground">{parameters.snrDB} dB</span>
               </div>
-              <Slider
-                value={[parameters.snrDB]}
-                onValueChange={([value]) =>
+              <SliderWithButtons
+                value={parameters.snrDB}
+                onValueChange={(value) =>
                   onParametersChange({ ...parameters, snrDB: value })
                 }
                 min={0}
@@ -222,9 +281,9 @@ export function ParameterPanel({
                   <Label>DFT阈值（时延索引）</Label>
                   <span className="text-sm text-muted-foreground">{parameters.dftThreshold}</span>
                 </div>
-                <Slider
-                  value={[parameters.dftThreshold]}
-                  onValueChange={([value]) =>
+                <SliderWithButtons
+                  value={parameters.dftThreshold}
+                  onValueChange={(value) =>
                     onParametersChange({ ...parameters, dftThreshold: value })
                   }
                   min={1}
@@ -256,9 +315,9 @@ export function ParameterPanel({
                         {multipathParams.delaySpread} 采样点
                       </span>
                     </div>
-                    <Slider
-                      value={[multipathParams.delaySpread]}
-                      onValueChange={([value]) =>
+                    <SliderWithButtons
+                      value={multipathParams.delaySpread}
+                      onValueChange={(value) =>
                         onMultipathChange({ ...multipathParams, delaySpread: value })
                       }
                       min={1}
@@ -276,9 +335,9 @@ export function ParameterPanel({
                         {multipathParams.numPaths}
                       </span>
                     </div>
-                    <Slider
-                      value={[multipathParams.numPaths]}
-                      onValueChange={([value]) => {
+                    <SliderWithButtons
+                      value={multipathParams.numPaths}
+                      onValueChange={(value) => {
                         const newNumPaths = value;
                         const currentPaths = [...multipathParams.paths];
                         
@@ -329,9 +388,9 @@ export function ParameterPanel({
                         <Label className="text-xs">时延 (采样点)</Label>
                         <span className="text-xs text-muted-foreground">{path.delay}</span>
                       </div>
-                      <Slider
-                        value={[path.delay]}
-                        onValueChange={([value]) => {
+                      <SliderWithButtons
+                        value={path.delay}
+                        onValueChange={(value) => {
                           const newPaths = [...multipathParams.paths];
                           newPaths[index] = { ...newPaths[index], delay: Math.round(value) };
                           onMultipathChange({ ...multipathParams, paths: newPaths });
@@ -348,9 +407,9 @@ export function ParameterPanel({
                         <Label className="text-xs">增益</Label>
                         <span className="text-xs text-muted-foreground">{path.gain.toFixed(2)}</span>
                       </div>
-                      <Slider
-                        value={[path.gain]}
-                        onValueChange={([value]) => {
+                      <SliderWithButtons
+                        value={path.gain}
+                        onValueChange={(value) => {
                           const newPaths = [...multipathParams.paths];
                           newPaths[index] = { ...newPaths[index], gain: value };
                           onMultipathChange({ ...multipathParams, paths: newPaths });
@@ -366,9 +425,9 @@ export function ParameterPanel({
                         <Label className="text-xs">相位 (度)</Label>
                         <span className="text-xs text-muted-foreground">{Math.round((path.phase * 180) / Math.PI)}</span>
                       </div>
-                      <Slider
-                        value={[(path.phase * 180) / Math.PI]}
-                        onValueChange={([value]) => {
+                      <SliderWithButtons
+                        value={(path.phase * 180) / Math.PI}
+                        onValueChange={(value) => {
                           const newPaths = [...multipathParams.paths];
                           newPaths[index] = { ...newPaths[index], phase: (value * Math.PI) / 180 };
                           onMultipathChange({ ...multipathParams, paths: newPaths });

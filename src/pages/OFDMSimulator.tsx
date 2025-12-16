@@ -150,7 +150,7 @@ export default function OFDMSimulator() {
 
         // 10. 信道估计（使用选择的插值方法）
         const { pilots, pilotIndices } = symbolGenerator.extractPilots(receivedFreqSignal);
-        const transmittedPilots = symbolGenerator.getZCSequence(); // 获取发送的ZC导频序列
+        const transmittedPilots = symbolGenerator.getTransmittedPilots(); // 获取发送的导频序列（含功率缩放）
         const channelEstimate = ChannelEstimator.estimate(
           pilots,
           pilotIndices,

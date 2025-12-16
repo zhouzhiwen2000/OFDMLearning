@@ -292,6 +292,13 @@ export class OFDMSymbolGenerator {
   getZCSequence(): Complex[] {
     return this.zcSequence;
   }
+
+  // 获取发送的导频序列（包含功率缩放）
+  getTransmittedPilots(): Complex[] {
+    const { power } = this.pilotConfig;
+    const scale = Math.sqrt(power);
+    return this.zcSequence.map(c => new Complex(c.real * scale, c.imag * scale));
+  }
 }
 
 // 多径信道参数
