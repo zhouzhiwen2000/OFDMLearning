@@ -479,13 +479,77 @@ export class ChannelEstimator {
     return channelEstimate;
   }
 
+  // 基于导频的最小二乘信道估计（DFT插值）
+  static leastSquaresDFT(
+    receivedPilots: Complex[],
+    pilotIndices: number[],
+    pilotPower: number,
+    numSubcarriers: number,
+    threshold: number
+  ): Complex[] {
+    // 在导频位置估计信道
+    const channelAtPilots: Complex[] = receivedPilots.map(
+      pilot => new Complex(pilot.real / pilotPower, pilot.imag / pilotPower)
+    );
+
+    // 首先使用线性插值得到所有子载波的初始估计
+    const channelEstimate: Complex[] = new Array(numSubcarriers);
+
+    for (let i = 0; i < numSubcarriers; i++) {
+      // 找到最近的两个导频
+      let leftIdx = 0;
+      let rightIdx = pilotIndices.length - 1;
+
+      for (let j = 0; j < pilotIndices.length - 1; j++) {
+        if (pilotIndices[j] <= i && pilotIndices[j + 1] > i) {
+          leftIdx = j;
+          rightIdx = j + 1;
+          break;
+        }
+      }
+
+      if (i <= pilotIndices[0]) {
+        channelEstimate[i] = channelAtPilots[0];
+      } else if (i >= pilotIndices[pilotIndices.length - 1]) {
+        channelEstimate[i] = channelAtPilots[channelAtPilots.length - 1];
+      } else {
+        // 线性插值
+        const x1 = pilotIndices[leftIdx];
+        const x2 = pilotIndices[rightIdx];
+        const y1 = channelAtPilots[leftIdx];
+        const y2 = channelAtPilots[rightIdx];
+
+        const weight = (i - x1) / (x2 - x1);
+        channelEstimate[i] = new Complex(
+          y1.real + weight * (y2.real - y1.real),
+          y1.imag + weight * (y2.imag - y1.imag)
+        );
+      }
+    }
+
+    // DFT插值：IFFT到时延域，阈值处理，FFT回频域
+    // 1. IFFT到时延域
+    const timeResponse = FFT.ifft(channelEstimate);
+
+    // 2. 将高于阈值的时延分量置零
+    for (let i = threshold; i < timeResponse.length; i++) {
+      timeResponse[i] = new Complex(0, 0);
+    }
+
+    // 3. FFT回频域
+    const filteredChannel = FFT.fft(timeResponse);
+
+    return filteredChannel;
+  }
+
   // 统一接口
   static estimate(
     receivedPilots: Complex[],
     pilotIndices: number[],
     pilotPower: number,
     numSubcarriers: number,
-    interpolationType: 'linear' | 'polar' = 'linear'
+    interpolationType: 'linear' | 'polar' | 'dft' = 'linear',
+    dftThreshold?: number
   ): Complex[] {
     if (interpolationType === 'polar') {
       return ChannelEstimator.leastSquaresPolar(
@@ -493,6 +557,15 @@ export class ChannelEstimator {
         pilotIndices,
         pilotPower,
         numSubcarriers
+      );
+    } else if (interpolationType === 'dft') {
+      const threshold = dftThreshold ?? Math.floor(numSubcarriers / 4);
+      return ChannelEstimator.leastSquaresDFT(
+        receivedPilots,
+        pilotIndices,
+        pilotPower,
+        numSubcarriers,
+        threshold
       );
     } else {
       return ChannelEstimator.leastSquaresLinear(

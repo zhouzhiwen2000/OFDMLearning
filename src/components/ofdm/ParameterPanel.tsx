@@ -8,7 +8,6 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 import type { OFDMParameters, MultipathParameters } from '@/types/ofdm';
 
 interface ParameterPanelProps {
@@ -196,7 +195,7 @@ export function ParameterPanel({
               <Label>信道插值方法</Label>
               <Select
                 value={parameters.interpolationType}
-                onValueChange={(value: 'linear' | 'polar') =>
+                onValueChange={(value: 'linear' | 'polar' | 'dft') =>
                   onParametersChange({ ...parameters, interpolationType: value })
                 }
               >
@@ -206,90 +205,103 @@ export function ParameterPanel({
                 <SelectContent>
                   <SelectItem value="linear">直角坐标线性插值</SelectItem>
                   <SelectItem value="polar">极坐标线性插值</SelectItem>
+                  <SelectItem value="dft">DFT插值</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {parameters.interpolationType === 'linear' 
-                  ? '对实部和虚部分别插值' 
-                  : '对幅度和相位分别插值'}
+                {parameters.interpolationType === 'linear' && '对实部和虚部分别插值'}
+                {parameters.interpolationType === 'polar' && '对幅度和相位分别插值'}
+                {parameters.interpolationType === 'dft' && 'IDFT到时延域，阈值滤波后DFT回频域'}
               </p>
             </div>
+
+            {/* DFT插值阈值（仅在选择DFT插值时显示） */}
+            {parameters.interpolationType === 'dft' && (
+              <div className="space-y-2 p-3 border border-border rounded-lg bg-muted/30">
+                <div className="flex justify-between">
+                  <Label>DFT阈值（时延索引）</Label>
+                  <span className="text-sm text-muted-foreground">{parameters.dftThreshold}</span>
+                </div>
+                <Slider
+                  value={[parameters.dftThreshold]}
+                  onValueChange={([value]) =>
+                    onParametersChange({ ...parameters, dftThreshold: value })
+                  }
+                  min={1}
+                  max={Math.floor(parameters.numSubcarriers / 2)}
+                  step={1}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  高于此索引的时延分量将被置零（范围: 1 - {Math.floor(parameters.numSubcarriers / 2)}）
+                </p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="channel" className="space-y-6 mt-4">
             {parameters.channelType === 'multipath' ? (
               <>
-                {/* 随机生成控制 */}
+                {/* 随机生成按钮 */}
                 <div className="space-y-3 p-3 border border-border rounded-lg bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="use-random">随机生成多径参数</Label>
-                    <Switch
-                      id="use-random"
-                      checked={multipathParams.useRandom}
-                      onCheckedChange={(checked) =>
-                        onMultipathChange({ ...multipathParams, useRandom: checked })
+                  <Label>随机生成多径参数</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    根据指定的时延扩展和路径数量，自动生成符合指数衰减模型的信道参数
+                  </p>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label className="text-sm">时延扩展 (Delay Spread)</Label>
+                      <span className="text-sm text-muted-foreground">
+                        {multipathParams.delaySpread} 采样点
+                      </span>
+                    </div>
+                    <Slider
+                      value={[multipathParams.delaySpread]}
+                      onValueChange={([value]) =>
+                        onMultipathChange({ ...multipathParams, delaySpread: value })
                       }
+                      min={1}
+                      max={100}
+                      step={1}
+                      className="w-full"
                     />
+                    <p className="text-xs text-muted-foreground">范围: 1 - 100 采样点</p>
                   </div>
 
-                  {multipathParams.useRandom && (
-                    <>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <Label>时延扩展 (Delay Spread)</Label>
-                          <span className="text-sm text-muted-foreground">
-                            {multipathParams.delaySpread} 采样点
-                          </span>
-                        </div>
-                        <Slider
-                          value={[multipathParams.delaySpread]}
-                          onValueChange={([value]) =>
-                            onMultipathChange({ ...multipathParams, delaySpread: value })
-                          }
-                          min={1}
-                          max={50}
-                          step={1}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-muted-foreground">范围: 1 - 50 采样点</p>
-                      </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label className="text-sm">路径数量</Label>
+                      <span className="text-sm text-muted-foreground">
+                        {multipathParams.numPaths}
+                      </span>
+                    </div>
+                    <Slider
+                      value={[multipathParams.numPaths]}
+                      onValueChange={([value]) =>
+                        onMultipathChange({ ...multipathParams, numPaths: value })
+                      }
+                      min={2}
+                      max={5}
+                      step={1}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted-foreground">范围: 2 - 5 条路径</p>
+                  </div>
 
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <Label>路径数量</Label>
-                          <span className="text-sm text-muted-foreground">
-                            {multipathParams.numPaths}
-                          </span>
-                        </div>
-                        <Slider
-                          value={[multipathParams.numPaths]}
-                          onValueChange={([value]) =>
-                            onMultipathChange({ ...multipathParams, numPaths: value })
-                          }
-                          min={2}
-                          max={5}
-                          step={1}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-muted-foreground">范围: 2 - 5 条路径</p>
-                      </div>
-
-                      <Button 
-                        onClick={onRandomizeChannel} 
-                        variant="secondary" 
-                        className="w-full"
-                      >
-                        🎲 重新生成随机参数
-                      </Button>
-                    </>
-                  )}
+                  <Button 
+                    onClick={onRandomizeChannel} 
+                    variant="secondary" 
+                    className="w-full"
+                  >
+                    🎲 生成随机信道参数
+                  </Button>
                 </div>
 
-                {!multipathParams.useRandom && (
-                  <>
-                    {/* 路径1 */}
-                    <div className="space-y-3 p-3 border border-border rounded-lg">
-                      <h4 className="font-medium text-sm">路径 1</h4>
+                {/* 手动配置路径参数 */}
+                {/* 路径1 */}
+                <div className="space-y-3 p-3 border border-border rounded-lg">
+                  <h4 className="font-medium text-sm">路径 1</h4>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -299,12 +311,13 @@ export function ParameterPanel({
                     <Slider
                       value={[multipathParams.path1Delay]}
                       onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path1Delay: value })
+                        onMultipathChange({ ...multipathParams, path1Delay: Math.round(value) })
                       }
                       min={0}
-                      max={10}
+                      max={255}
                       step={1}
                     />
+                    <p className="text-xs text-muted-foreground">范围: 0 - 255</p>
                   </div>
 
                   <div className="space-y-2">
@@ -352,12 +365,13 @@ export function ParameterPanel({
                     <Slider
                       value={[multipathParams.path2Delay]}
                       onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path2Delay: value })
+                        onMultipathChange({ ...multipathParams, path2Delay: Math.round(value) })
                       }
                       min={0}
-                      max={10}
+                      max={255}
                       step={1}
                     />
+                    <p className="text-xs text-muted-foreground">范围: 0 - 255</p>
                   </div>
 
                   <div className="space-y-2">
@@ -405,12 +419,13 @@ export function ParameterPanel({
                     <Slider
                       value={[multipathParams.path3Delay]}
                       onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path3Delay: value })
+                        onMultipathChange({ ...multipathParams, path3Delay: Math.round(value) })
                       }
                       min={0}
-                      max={10}
+                      max={255}
                       step={1}
                     />
+                    <p className="text-xs text-muted-foreground">范围: 0 - 255</p>
                   </div>
 
                   <div className="space-y-2">
@@ -445,9 +460,7 @@ export function ParameterPanel({
                     />
                   </div>
                 </div>
-                </>
-              )}
-            </>
+              </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <p>AWGN信道无需额外配置</p>

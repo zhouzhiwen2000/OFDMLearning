@@ -13,7 +13,8 @@ export interface OFDMParameters {
   pilotPower: number; // 导频功率
   snrDB: number; // 信噪比（dB）
   channelType: 'awgn' | 'multipath'; // 信道类型
-  interpolationType: 'linear' | 'polar'; // 插值类型
+  interpolationType: 'linear' | 'polar' | 'dft'; // 插值类型
+  dftThreshold: number; // DFT插值阈值（时延索引）
 }
 
 // 多径信道参数
@@ -21,13 +22,13 @@ export interface MultipathParameters {
   useRandom: boolean; // 是否使用随机生成
   delaySpread: number; // 时延扩展（采样点）
   numPaths: number; // 路径数量
-  path1Delay: number; // 路径1时延
+  path1Delay: number; // 路径1时延（整数，0-255）
   path1Gain: number; // 路径1增益
   path1Phase: number; // 路径1相位
-  path2Delay: number; // 路径2时延
+  path2Delay: number; // 路径2时延（整数，0-255）
   path2Gain: number; // 路径2增益
   path2Phase: number; // 路径2相位
-  path3Delay: number; // 路径3时延
+  path3Delay: number; // 路径3时延（整数，0-255）
   path3Gain: number; // 路径3增益
   path3Phase: number; // 路径3相位
 }
