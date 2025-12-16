@@ -518,8 +518,11 @@ export class ChannelEstimator {
     numSubcarriers: number,
     threshold: number
   ): Complex[] {
-    // 初始化频域信道估计，全部置零
-    const channelEstimate: Complex[] = new Array(numSubcarriers).fill(new Complex(0, 0));
+    // 初始化频域信道估计，全部置零（每个元素独立创建）
+    const channelEstimate: Complex[] = Array.from(
+      { length: numSubcarriers },
+      () => new Complex(0, 0)
+    );
 
     // 只在导频位置赋值信道估计值（接收导频 / 发送导频）
     for (let i = 0; i < pilotIndices.length; i++) {
@@ -543,7 +546,13 @@ export class ChannelEstimator {
     // 3. FFT回频域
     const filteredChannel = FFT.fft(timeResponse);
 
-    return filteredChannel;
+    // 4. 幅度补偿：由于稀疏频域信号经过IFFT/FFT，需要根据导频密度进行补偿
+    // 补偿因子 = 子载波总数 / 导频数量
+    const compensationFactor = numSubcarriers / pilotIndices.length;
+    
+    return filteredChannel.map(c => 
+      new Complex(c.real * compensationFactor, c.imag * compensationFactor)
+    );
   }
 
   // 统一接口
