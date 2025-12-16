@@ -6,16 +6,21 @@ import type { Complex } from '@/utils/ofdm';
 
 // OFDM系统参数
 export interface OFDMParameters {
-  numSubcarriers: number; // 子载波数量
+  numSubcarriers: number; // 子载波数量（2的指数）
+  cpLength: number; // 循环前缀长度
   modulationType: 'QPSK' | '16QAM' | '64QAM'; // 调制方式
   pilotSpacing: number; // 导频间隔
   pilotPower: number; // 导频功率
   snrDB: number; // 信噪比（dB）
   channelType: 'awgn' | 'multipath'; // 信道类型
+  interpolationType: 'linear' | 'polar'; // 插值类型
 }
 
 // 多径信道参数
 export interface MultipathParameters {
+  useRandom: boolean; // 是否使用随机生成
+  delaySpread: number; // 时延扩展（采样点）
+  numPaths: number; // 路径数量
   path1Delay: number; // 路径1时延
   path1Gain: number; // 路径1增益
   path1Phase: number; // 路径1相位

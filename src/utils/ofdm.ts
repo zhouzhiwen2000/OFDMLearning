@@ -356,8 +356,8 @@ function randomGaussian(): number {
 
 // 信道估计器
 export class ChannelEstimator {
-  // 基于导频的最小二乘信道估计
-  static leastSquares(
+  // 基于导频的最小二乘信道估计（直角坐标线性插值）
+  static leastSquaresLinear(
     receivedPilots: Complex[],
     pilotIndices: number[],
     pilotPower: number,
@@ -368,7 +368,7 @@ export class ChannelEstimator {
       pilot => new Complex(pilot.real / pilotPower, pilot.imag / pilotPower)
     );
 
-    // 线性插值到所有子载波
+    // 线性插值到所有子载波（直角坐标系）
     const channelEstimate: Complex[] = new Array(numSubcarriers);
 
     for (let i = 0; i < numSubcarriers; i++) {
@@ -389,7 +389,7 @@ export class ChannelEstimator {
       } else if (i >= pilotIndices[pilotIndices.length - 1]) {
         channelEstimate[i] = channelAtPilots[channelAtPilots.length - 1];
       } else {
-        // 线性插值
+        // 线性插值（直角坐标系）
         const x1 = pilotIndices[leftIdx];
         const x2 = pilotIndices[rightIdx];
         const y1 = channelAtPilots[leftIdx];
@@ -404,6 +404,104 @@ export class ChannelEstimator {
     }
 
     return channelEstimate;
+  }
+
+  // 基于导频的最小二乘信道估计（极坐标线性插值）
+  static leastSquaresPolar(
+    receivedPilots: Complex[],
+    pilotIndices: number[],
+    pilotPower: number,
+    numSubcarriers: number
+  ): Complex[] {
+    // 在导频位置估计信道
+    const channelAtPilots: Complex[] = receivedPilots.map(
+      pilot => new Complex(pilot.real / pilotPower, pilot.imag / pilotPower)
+    );
+
+    // 转换为极坐标
+    const magnitudes = channelAtPilots.map(c => c.magnitude());
+    const phases = channelAtPilots.map(c => c.phase());
+
+    // 线性插值到所有子载波（极坐标系）
+    const channelEstimate: Complex[] = new Array(numSubcarriers);
+
+    for (let i = 0; i < numSubcarriers; i++) {
+      // 找到最近的两个导频
+      let leftIdx = 0;
+      let rightIdx = pilotIndices.length - 1;
+
+      for (let j = 0; j < pilotIndices.length - 1; j++) {
+        if (pilotIndices[j] <= i && pilotIndices[j + 1] > i) {
+          leftIdx = j;
+          rightIdx = j + 1;
+          break;
+        }
+      }
+
+      let magnitude: number;
+      let phase: number;
+
+      if (i <= pilotIndices[0]) {
+        magnitude = magnitudes[0];
+        phase = phases[0];
+      } else if (i >= pilotIndices[pilotIndices.length - 1]) {
+        magnitude = magnitudes[magnitudes.length - 1];
+        phase = phases[phases.length - 1];
+      } else {
+        // 线性插值（极坐标系）
+        const x1 = pilotIndices[leftIdx];
+        const x2 = pilotIndices[rightIdx];
+        const mag1 = magnitudes[leftIdx];
+        const mag2 = magnitudes[rightIdx];
+        const phase1 = phases[leftIdx];
+        const phase2 = phases[rightIdx];
+
+        const weight = (i - x1) / (x2 - x1);
+        
+        // 幅度线性插值
+        magnitude = mag1 + weight * (mag2 - mag1);
+        
+        // 相位线性插值（处理相位跳变）
+        let phaseDiff = phase2 - phase1;
+        // 将相位差归一化到[-π, π]
+        while (phaseDiff > Math.PI) phaseDiff -= 2 * Math.PI;
+        while (phaseDiff < -Math.PI) phaseDiff += 2 * Math.PI;
+        phase = phase1 + weight * phaseDiff;
+      }
+
+      // 转换回直角坐标
+      channelEstimate[i] = new Complex(
+        magnitude * Math.cos(phase),
+        magnitude * Math.sin(phase)
+      );
+    }
+
+    return channelEstimate;
+  }
+
+  // 统一接口
+  static estimate(
+    receivedPilots: Complex[],
+    pilotIndices: number[],
+    pilotPower: number,
+    numSubcarriers: number,
+    interpolationType: 'linear' | 'polar' = 'linear'
+  ): Complex[] {
+    if (interpolationType === 'polar') {
+      return ChannelEstimator.leastSquaresPolar(
+        receivedPilots,
+        pilotIndices,
+        pilotPower,
+        numSubcarriers
+      );
+    } else {
+      return ChannelEstimator.leastSquaresLinear(
+        receivedPilots,
+        pilotIndices,
+        pilotPower,
+        numSubcarriers
+      );
+    }
   }
 }
 
@@ -457,4 +555,66 @@ export function calculateBER(transmittedBits: number[], receivedBits: number[]):
 // 生成随机比特流
 export function generateRandomBits(length: number): number[] {
   return Array.from({ length }, () => (Math.random() > 0.5 ? 1 : 0));
+}
+
+// 添加循环前缀
+export function addCyclicPrefix(signal: Complex[], cpLength: number): Complex[] {
+  if (cpLength <= 0 || cpLength >= signal.length) {
+    return signal;
+  }
+  
+  // 取信号末尾cpLength个样本，添加到信号前面
+  const cp = signal.slice(signal.length - cpLength);
+  return [...cp, ...signal];
+}
+
+// 移除循环前缀
+export function removeCyclicPrefix(signal: Complex[], cpLength: number): Complex[] {
+  if (cpLength <= 0 || cpLength >= signal.length) {
+    return signal;
+  }
+  
+  // 移除前cpLength个样本
+  return signal.slice(cpLength);
+}
+
+// 生成随机多径信道参数
+export function generateRandomMultipathChannel(
+  delaySpread: number,
+  numPaths: number = 3
+): MultipathChannel {
+  const delays: number[] = [];
+  const gains: number[] = [];
+  const phases: number[] = [];
+
+  // 第一条路径（直射路径）
+  delays.push(0);
+  gains.push(1.0);
+  phases.push(0);
+
+  // 生成其他路径
+  for (let i = 1; i < numPaths; i++) {
+    // 时延在[0, delaySpread]范围内均匀分布
+    const delay = Math.random() * delaySpread;
+    delays.push(delay);
+
+    // 增益随时延指数衰减，并添加随机扰动
+    const baseGain = Math.exp(-delay / (delaySpread / 2));
+    const randomFactor = 0.5 + Math.random() * 0.5; // [0.5, 1.0]
+    gains.push(baseGain * randomFactor);
+
+    // 相位在[0, 2π]范围内均匀分布
+    phases.push(Math.random() * 2 * Math.PI);
+  }
+
+  // 归一化增益，使总功率为1
+  const totalPower = gains.reduce((sum, g) => sum + g * g, 0);
+  const normFactor = Math.sqrt(totalPower);
+  const normalizedGains = gains.map(g => g / normFactor);
+
+  return {
+    delays,
+    gains: normalizedGains,
+    phases,
+  };
 }

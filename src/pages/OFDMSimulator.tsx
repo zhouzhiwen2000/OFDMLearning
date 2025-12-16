@@ -21,20 +21,28 @@ import {
   addAWGN,
   calculateBER,
   generateRandomBits,
+  addCyclicPrefix,
+  removeCyclicPrefix,
+  generateRandomMultipathChannel,
 } from '@/utils/ofdm';
 
 export default function OFDMSimulator() {
   // 默认参数
   const [parameters, setParameters] = useState<OFDMParameters>({
     numSubcarriers: 128,
+    cpLength: 16,
     modulationType: 'QPSK',
     pilotSpacing: 8,
     pilotPower: 1.0,
     snrDB: 15,
     channelType: 'multipath',
+    interpolationType: 'linear',
   });
 
   const [multipathParams, setMultipathParams] = useState<MultipathParameters>({
+    useRandom: false,
+    delaySpread: 10,
+    numPaths: 3,
     path1Delay: 0,
     path1Gain: 1.0,
     path1Phase: 0,
@@ -48,6 +56,30 @@ export default function OFDMSimulator() {
 
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  // 随机生成多径参数
+  const randomizeChannel = useCallback(() => {
+    if (!multipathParams.useRandom) return;
+
+    const randomChannel = generateRandomMultipathChannel(
+      multipathParams.delaySpread,
+      multipathParams.numPaths
+    );
+
+    // 更新多径参数
+    setMultipathParams(prev => ({
+      ...prev,
+      path1Delay: randomChannel.delays[0] || 0,
+      path1Gain: randomChannel.gains[0] || 1.0,
+      path1Phase: randomChannel.phases[0] || 0,
+      path2Delay: randomChannel.delays[1] || 0,
+      path2Gain: randomChannel.gains[1] || 0,
+      path2Phase: randomChannel.phases[1] || 0,
+      path3Delay: randomChannel.delays[2] || 0,
+      path3Gain: randomChannel.gains[2] || 0,
+      path3Phase: randomChannel.phases[2] || 0,
+    }));
+  }, [multipathParams.useRandom, multipathParams.delaySpread, multipathParams.numPaths]);
 
   // 执行仿真
   const runSimulation = useCallback(() => {
@@ -78,18 +110,37 @@ export default function OFDMSimulator() {
         const ofdmSymbol = symbolGenerator.insertPilots(dataSymbols);
 
         // 4. IFFT（生成时域信号）
-        const timeSignal = FFT.ifft(ofdmSymbol);
+        let timeSignal = FFT.ifft(ofdmSymbol);
 
-        // 5. 通过信道
+        // 5. 添加循环前缀
+        if (parameters.cpLength > 0) {
+          timeSignal = addCyclicPrefix(timeSignal, parameters.cpLength);
+        }
+
+        // 6. 通过信道
         let receivedSignal: Complex[];
         let channelResponse: Complex[];
 
         if (parameters.channelType === 'multipath') {
-          const channel = new ChannelSimulator({
-            delays: [multipathParams.path1Delay, multipathParams.path2Delay, multipathParams.path3Delay],
-            gains: [multipathParams.path1Gain, multipathParams.path2Gain, multipathParams.path3Gain],
-            phases: [multipathParams.path1Phase, multipathParams.path2Phase, multipathParams.path3Phase],
-          });
+          // 根据是否使用随机生成选择信道参数
+          let channelParams;
+          if (multipathParams.useRandom) {
+            // 使用随机生成的参数
+            const randomChannel = generateRandomMultipathChannel(
+              multipathParams.delaySpread,
+              multipathParams.numPaths
+            );
+            channelParams = randomChannel;
+          } else {
+            // 使用手动设置的参数
+            channelParams = {
+              delays: [multipathParams.path1Delay, multipathParams.path2Delay, multipathParams.path3Delay],
+              gains: [multipathParams.path1Gain, multipathParams.path2Gain, multipathParams.path3Gain],
+              phases: [multipathParams.path1Phase, multipathParams.path2Phase, multipathParams.path3Phase],
+            };
+          }
+
+          const channel = new ChannelSimulator(channelParams);
           receivedSignal = channel.applyChannel(timeSignal);
           channelResponse = channel.getFrequencyResponse(parameters.numSubcarriers);
         } else {
@@ -98,22 +149,28 @@ export default function OFDMSimulator() {
           channelResponse = Array(parameters.numSubcarriers).fill(new Complex(1, 0));
         }
 
-        // 6. 添加噪声
+        // 7. 添加噪声
         receivedSignal = addAWGN(receivedSignal, parameters.snrDB);
 
-        // 7. FFT（转换到频域）
+        // 8. 移除循环前缀
+        if (parameters.cpLength > 0) {
+          receivedSignal = removeCyclicPrefix(receivedSignal, parameters.cpLength);
+        }
+
+        // 9. FFT（转换到频域）
         const receivedFreqSignal = FFT.fft(receivedSignal.slice(0, parameters.numSubcarriers));
 
-        // 8. 信道估计
+        // 10. 信道估计（使用选择的插值方法）
         const { pilots, pilotIndices } = symbolGenerator.extractPilots(receivedFreqSignal);
-        const channelEstimate = ChannelEstimator.leastSquares(
+        const channelEstimate = ChannelEstimator.estimate(
           pilots,
           pilotIndices,
           parameters.pilotPower,
-          parameters.numSubcarriers
+          parameters.numSubcarriers,
+          parameters.interpolationType
         );
 
-        // 9. 信道均衡
+        // 11. 信道均衡
         const snrLinear = 10 ** (parameters.snrDB / 10);
         const equalizedSymbols = ChannelEqualizer.mmse(
           receivedFreqSignal,
@@ -182,6 +239,7 @@ export default function OFDMSimulator() {
               multipathParams={multipathParams}
               onParametersChange={setParameters}
               onMultipathChange={setMultipathParams}
+              onRandomizeChannel={randomizeChannel}
               onSimulate={runSimulation}
               isSimulating={isSimulating}
             />

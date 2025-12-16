@@ -8,6 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import type { OFDMParameters, MultipathParameters } from '@/types/ofdm';
 
 interface ParameterPanelProps {
@@ -15,6 +16,7 @@ interface ParameterPanelProps {
   multipathParams: MultipathParameters;
   onParametersChange: (params: OFDMParameters) => void;
   onMultipathChange: (params: MultipathParameters) => void;
+  onRandomizeChannel: () => void;
   onSimulate: () => void;
   isSimulating?: boolean;
 }
@@ -24,9 +26,13 @@ export function ParameterPanel({
   multipathParams,
   onParametersChange,
   onMultipathChange,
+  onRandomizeChannel,
   onSimulate,
   isSimulating = false,
 }: ParameterPanelProps) {
+  // 计算2的指数选项
+  const powerOfTwoOptions = [64, 128, 256, 512, 1024, 2048];
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -46,20 +52,47 @@ export function ParameterPanel({
             {/* 子载波数量 */}
             <div className="space-y-2">
               <div className="flex justify-between">
-                <Label>子载波数量</Label>
+                <Label>子载波数量（2的指数）</Label>
                 <span className="text-sm text-muted-foreground">{parameters.numSubcarriers}</span>
               </div>
-              <Slider
-                value={[parameters.numSubcarriers]}
-                onValueChange={([value]) =>
-                  onParametersChange({ ...parameters, numSubcarriers: value })
+              <Select
+                value={parameters.numSubcarriers.toString()}
+                onValueChange={(value) =>
+                  onParametersChange({ ...parameters, numSubcarriers: parseInt(value) })
                 }
-                min={64}
-                max={512}
-                step={64}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {powerOfTwoOptions.map((n) => (
+                    <SelectItem key={n} value={n.toString()}>
+                      {n} (2^{Math.log2(n)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* CP长度 */}
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label>循环前缀长度</Label>
+                <span className="text-sm text-muted-foreground">{parameters.cpLength}</span>
+              </div>
+              <Slider
+                value={[parameters.cpLength]}
+                onValueChange={([value]) =>
+                  onParametersChange({ ...parameters, cpLength: value })
+                }
+                min={0}
+                max={Math.floor(parameters.numSubcarriers / 4)}
+                step={1}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground">范围: 64 - 512</p>
+              <p className="text-xs text-muted-foreground">
+                范围: 0 - {Math.floor(parameters.numSubcarriers / 4)}
+              </p>
             </div>
 
             {/* 调制方式 */}
@@ -157,14 +190,106 @@ export function ParameterPanel({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* 插值类型 */}
+            <div className="space-y-2">
+              <Label>信道插值方法</Label>
+              <Select
+                value={parameters.interpolationType}
+                onValueChange={(value: 'linear' | 'polar') =>
+                  onParametersChange({ ...parameters, interpolationType: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="linear">直角坐标线性插值</SelectItem>
+                  <SelectItem value="polar">极坐标线性插值</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {parameters.interpolationType === 'linear' 
+                  ? '对实部和虚部分别插值' 
+                  : '对幅度和相位分别插值'}
+              </p>
+            </div>
           </TabsContent>
 
           <TabsContent value="channel" className="space-y-6 mt-4">
             {parameters.channelType === 'multipath' ? (
               <>
-                {/* 路径1 */}
-                <div className="space-y-3 p-3 border border-border rounded-lg">
-                  <h4 className="font-medium text-sm">路径 1</h4>
+                {/* 随机生成控制 */}
+                <div className="space-y-3 p-3 border border-border rounded-lg bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="use-random">随机生成多径参数</Label>
+                    <Switch
+                      id="use-random"
+                      checked={multipathParams.useRandom}
+                      onCheckedChange={(checked) =>
+                        onMultipathChange({ ...multipathParams, useRandom: checked })
+                      }
+                    />
+                  </div>
+
+                  {multipathParams.useRandom && (
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <Label>时延扩展 (Delay Spread)</Label>
+                          <span className="text-sm text-muted-foreground">
+                            {multipathParams.delaySpread} 采样点
+                          </span>
+                        </div>
+                        <Slider
+                          value={[multipathParams.delaySpread]}
+                          onValueChange={([value]) =>
+                            onMultipathChange({ ...multipathParams, delaySpread: value })
+                          }
+                          min={1}
+                          max={50}
+                          step={1}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-muted-foreground">范围: 1 - 50 采样点</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <Label>路径数量</Label>
+                          <span className="text-sm text-muted-foreground">
+                            {multipathParams.numPaths}
+                          </span>
+                        </div>
+                        <Slider
+                          value={[multipathParams.numPaths]}
+                          onValueChange={([value]) =>
+                            onMultipathChange({ ...multipathParams, numPaths: value })
+                          }
+                          min={2}
+                          max={5}
+                          step={1}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-muted-foreground">范围: 2 - 5 条路径</p>
+                      </div>
+
+                      <Button 
+                        onClick={onRandomizeChannel} 
+                        variant="secondary" 
+                        className="w-full"
+                      >
+                        🎲 重新生成随机参数
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                {!multipathParams.useRandom && (
+                  <>
+                    {/* 路径1 */}
+                    <div className="space-y-3 p-3 border border-border rounded-lg">
+                      <h4 className="font-medium text-sm">路径 1</h4>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -320,7 +445,9 @@ export function ParameterPanel({
                     />
                   </div>
                 </div>
-              </>
+                </>
+              )}
+            </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <p>AWGN信道无需额外配置</p>
