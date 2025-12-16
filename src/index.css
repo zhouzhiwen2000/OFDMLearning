@@ -10,73 +10,92 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --radius: 0.5rem;
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* 科技蓝主色调 #2196F3 -> HSL(207, 90%, 54%) */
+    --background: 210 100% 98%;
+    --foreground: 210 20% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 210 20% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --sidebar-background: 300 0% 98%;
-    --sidebar-foreground: 300 0% 4%;
-    --sidebar-primary: 330 0% 9%;
-    --sidebar-primary-foreground: 300 0% 98%;
-    --sidebar-accent: 300 0% 96%;
-    --sidebar-accent-foreground: 330 0% 9%;
-    --sidebar-border: 330 0% 90%;
-    --sidebar-ring: 0 0% 63%;
-    --destructive-foreground: 210 40% 98%;
+    --popover-foreground: 210 20% 15%;
+    --primary: 207 90% 54%;
+    --primary-foreground: 0 0% 100%;
+    /* 清新绿辅助色 #4CAF50 -> HSL(122, 39%, 49%) */
+    --secondary: 122 39% 49%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 210 15% 50%;
+    --accent: 210 100% 95%;
+    --accent-foreground: 207 90% 54%;
+    /* 错误红 #F44336 -> HSL(4, 90%, 58%) */
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
+    /* 警示橙 #FF9800 -> HSL(36, 100%, 50%) */
+    --warning: 36 100% 50%;
+    --warning-foreground: 0 0% 100%;
+    /* 成功绿 */
+    --success: 122 39% 49%;
+    --success-foreground: 0 0% 100%;
+    /* 信息蓝 */
+    --info: 207 90% 54%;
+    --info-foreground: 0 0% 100%;
+    --border: 210 30% 88%;
+    --input: 210 30% 88%;
+    --ring: 207 90% 54%;
+    /* 图表颜色 - 科技感配色 */
+    --chart-1: 207 90% 54%;
+    --chart-2: 122 39% 49%;
+    --chart-3: 280 70% 60%;
+    --chart-4: 36 100% 50%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 210 100% 98%;
+    --sidebar-foreground: 210 20% 15%;
+    --sidebar-primary: 207 90% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 100% 95%;
+    --sidebar-accent-foreground: 207 90% 54%;
+    --sidebar-border: 210 30% 88%;
+    --sidebar-ring: 207 90% 54%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%; 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
+    --background: 210 30% 8%;
+    --foreground: 210 20% 95%;
+    --card: 210 25% 12%;
+    --card-foreground: 210 20% 95%;
+    --popover: 210 25% 12%;
+    --popover-foreground: 210 20% 95%;
+    --primary: 207 90% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 122 39% 49%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 25% 18%;
+    --muted-foreground: 210 15% 65%;
+    --accent: 210 25% 15%;
+    --accent-foreground: 207 90% 54%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 36 100% 50%;
+    --warning-foreground: 0 0% 100%;
+    --success: 122 39% 49%;
+    --success-foreground: 0 0% 100%;
+    --info: 207 90% 54%;
+    --info-foreground: 0 0% 100%;
+    --border: 210 25% 20%;
+    --input: 210 25% 20%;
+    --ring: 207 90% 54%;
+    --chart-1: 207 90% 54%;
+    --chart-2: 122 39% 49%;
+    --chart-3: 280 70% 60%;
+    --chart-4: 36 100% 50%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 330 0% 9%;
-    --sidebar-foreground: 300 0% 98%;
-    --sidebar-primary: 225 84% 49%;
-    --sidebar-primary-foreground: 300 0% 98%;
-    --sidebar-accent: 320 0% 15%;
-    --sidebar-accent-foreground: 300 0% 98%;
-    --sidebar-border: 300 50% 0% / 10%;
-    --sidebar-ring: 300 0% 45%;
-    --destructive-foreground: 210 40% 98%;
+    --sidebar-background: 210 30% 8%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 207 90% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 25% 15%;
+    --sidebar-accent-foreground: 207 90% 54%;
+    --sidebar-border: 210 25% 20%;
+    --sidebar-ring: 207 90% 54%;
   }
 }
 

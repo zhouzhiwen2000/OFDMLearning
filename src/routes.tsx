@@ -1,4 +1,4 @@
-import SamplePage from './pages/SamplePage';
+import OFDMSimulator from './pages/OFDMSimulator';
 import type { ReactNode } from 'react';
 
 interface RouteConfig {
@@ -10,9 +10,9 @@ interface RouteConfig {
 
 const routes: RouteConfig[] = [
   {
-    name: 'Sample Page',
+    name: 'OFDM通信系统演示',
     path: '/',
-    element: <SamplePage />
+    element: <OFDMSimulator />
   }
 ];
 
