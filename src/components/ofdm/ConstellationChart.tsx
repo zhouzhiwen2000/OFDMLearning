@@ -42,59 +42,61 @@ export function ConstellationChart({
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis
-              type="number"
-              dataKey="real"
-              name="实部"
-              domain={[-2, 2]}
-              stroke="hsl(var(--foreground))"
-              tick={{ fill: 'hsl(var(--foreground))' }}
-            />
-            <YAxis
-              type="number"
-              dataKey="imag"
-              name="虚部"
-              domain={[-2, 2]}
-              stroke="hsl(var(--foreground))"
-              tick={{ fill: 'hsl(var(--foreground))' }}
-            />
-            <Tooltip
-              cursor={{ strokeDasharray: '3 3' }}
-              contentStyle={{
-                backgroundColor: 'hsl(var(--popover))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                color: 'hsl(var(--popover-foreground))',
-              }}
-            />
-            <Legend />
-            {receivedSymbols && (
-              <Scatter
-                name="接收符号"
-                data={rxData}
-                fill="hsl(var(--destructive))"
-                fillOpacity={0.6}
-                shape="circle"
+      <CardContent className="flex justify-center">
+        <div className="w-full max-w-[400px] aspect-square">
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis
+                type="number"
+                dataKey="real"
+                name="实部"
+                domain={[-2, 2]}
+                stroke="hsl(var(--foreground))"
+                tick={{ fill: 'hsl(var(--foreground))' }}
               />
-            )}
-            <Scatter
-              name="发送数据"
-              data={txDataSymbols}
-              fill="hsl(var(--primary))"
-              shape="cross"
-            />
-            <Scatter
-              name="发送导频"
-              data={txPilots}
-              fill="hsl(var(--chart-2))"
-              shape="diamond"
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
+              <YAxis
+                type="number"
+                dataKey="imag"
+                name="虚部"
+                domain={[-2, 2]}
+                stroke="hsl(var(--foreground))"
+                tick={{ fill: 'hsl(var(--foreground))' }}
+              />
+              <Tooltip
+                cursor={{ strokeDasharray: '3 3' }}
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--popover))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  color: 'hsl(var(--popover-foreground))',
+                }}
+              />
+              <Legend />
+              {receivedSymbols && (
+                <Scatter
+                  name="接收符号"
+                  data={rxData}
+                  fill="hsl(var(--destructive))"
+                  fillOpacity={0.6}
+                  shape="circle"
+                />
+              )}
+              <Scatter
+                name="发送数据"
+                data={txDataSymbols}
+                fill="hsl(var(--primary))"
+                shape="cross"
+              />
+              <Scatter
+                name="发送导频"
+                data={txPilots}
+                fill="hsl(var(--chart-2))"
+                shape="diamond"
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

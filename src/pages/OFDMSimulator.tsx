@@ -181,9 +181,9 @@ export default function OFDMSimulator() {
         setResult({
           transmittedBits,
           receivedBits,
-          transmittedSymbols: dataSymbols,
-          receivedSymbols: receivedDataSymbols,
-          equalizedSymbols: receivedDataSymbols,
+          transmittedSymbols: ofdmSymbol, // 使用完整的OFDM符号（含导频）
+          receivedSymbols: equalizedSymbols, // 使用均衡后的完整符号（含导频）
+          equalizedSymbols: receivedDataSymbols, // 这里保留数据符号用于其他用途，或者也改成equalizedSymbols？
           timeSignal,
           freqSignal: ofdmSymbol,
           channelResponse,
