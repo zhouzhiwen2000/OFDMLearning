@@ -44,15 +44,11 @@ export default function OFDMSimulator() {
     useRandom: false,
     delaySpread: 10,
     numPaths: 3,
-    path1Delay: 0,
-    path1Gain: 1.0,
-    path1Phase: 0,
-    path2Delay: 2,
-    path2Gain: 0.5,
-    path2Phase: Math.PI / 4,
-    path3Delay: 4,
-    path3Gain: 0.3,
-    path3Phase: Math.PI / 2,
+    paths: [
+      { delay: 0, gain: 1.0, phase: 0 },
+      { delay: 2, gain: 0.5, phase: Math.PI / 4 },
+      { delay: 4, gain: 0.3, phase: Math.PI / 2 },
+    ],
   });
 
   const [result, setResult] = useState<SimulationResult | null>(null);
@@ -66,17 +62,18 @@ export default function OFDMSimulator() {
     );
 
     // 更新多径参数
+    const newPaths = [];
+    for (let i = 0; i < multipathParams.numPaths; i++) {
+      newPaths.push({
+        delay: Math.round(randomChannel.delays[i] || 0),
+        gain: randomChannel.gains[i] || 0,
+        phase: randomChannel.phases[i] || 0,
+      });
+    }
+
     setMultipathParams(prev => ({
       ...prev,
-      path1Delay: Math.round(randomChannel.delays[0] || 0),
-      path1Gain: randomChannel.gains[0] || 1.0,
-      path1Phase: randomChannel.phases[0] || 0,
-      path2Delay: Math.round(randomChannel.delays[1] || 0),
-      path2Gain: randomChannel.gains[1] || 0,
-      path2Phase: randomChannel.phases[1] || 0,
-      path3Delay: Math.round(randomChannel.delays[2] || 0),
-      path3Gain: randomChannel.gains[2] || 0,
-      path3Phase: randomChannel.phases[2] || 0,
+      paths: newPaths,
     }));
   }, [multipathParams.delaySpread, multipathParams.numPaths]);
 
@@ -123,9 +120,9 @@ export default function OFDMSimulator() {
         if (parameters.channelType === 'multipath') {
           // 使用手动设置的参数
           const channelParams = {
-            delays: [multipathParams.path1Delay, multipathParams.path2Delay, multipathParams.path3Delay],
-            gains: [multipathParams.path1Gain, multipathParams.path2Gain, multipathParams.path3Gain],
-            phases: [multipathParams.path1Phase, multipathParams.path2Phase, multipathParams.path3Phase],
+            delays: multipathParams.paths.map(p => p.delay),
+            gains: multipathParams.paths.map(p => p.gain),
+            phases: multipathParams.paths.map(p => p.phase),
           };
 
           const channel = new ChannelSimulator(channelParams);
@@ -150,10 +147,11 @@ export default function OFDMSimulator() {
 
         // 10. 信道估计（使用选择的插值方法）
         const { pilots, pilotIndices } = symbolGenerator.extractPilots(receivedFreqSignal);
+        const transmittedPilots = symbolGenerator.getZCSequence(); // 获取发送的ZC导频序列
         const channelEstimate = ChannelEstimator.estimate(
           pilots,
           pilotIndices,
-          parameters.pilotPower,
+          transmittedPilots,
           parameters.numSubcarriers,
           parameters.interpolationType,
           parameters.dftThreshold

@@ -202,12 +202,32 @@ export interface PilotConfig {
   power: number; // 导频功率
 }
 
+// 生成ZC序列（Zadoff-Chu序列）
+function generateZCSequence(length: number, root: number): Complex[] {
+  const sequence: Complex[] = [];
+  const cf = length % 2 === 0 ? 0 : 1; // 偶数长度为0，奇数长度为1
+  
+  for (let n = 0; n < length; n++) {
+    const phase = (-Math.PI * root * n * (n + cf)) / length;
+    sequence.push(new Complex(Math.cos(phase), Math.sin(phase)));
+  }
+  
+  return sequence;
+}
+
 // OFDM符号生成器
 export class OFDMSymbolGenerator {
+  private zcSequence: Complex[]; // ZC导频序列
+  
   constructor(
     private numSubcarriers: number,
     private pilotConfig: PilotConfig
-  ) {}
+  ) {
+    // 计算导频数量
+    const numPilots = Math.ceil(this.numSubcarriers / this.pilotConfig.spacing);
+    // 生成ZC序列，使用根序列索引为1
+    this.zcSequence = generateZCSequence(numPilots, 1);
+  }
 
   // 插入导频
   insertPilots(dataSymbols: Complex[]): Complex[] {
@@ -217,10 +237,16 @@ export class OFDMSymbolGenerator {
     const { spacing, power } = this.pilotConfig;
 
     let dataIndex = 0;
+    let pilotIndex = 0;
     for (let i = 0; i < this.numSubcarriers; i++) {
       if (i % spacing === 0) {
-        // 导频位置
-        ofdmSymbol[i] = new Complex(power, 0);
+        // 导频位置：使用ZC序列并乘以功率因子
+        const zcSymbol = this.zcSequence[pilotIndex % this.zcSequence.length];
+        ofdmSymbol[i] = new Complex(
+          zcSymbol.real * Math.sqrt(power),
+          zcSymbol.imag * Math.sqrt(power)
+        );
+        pilotIndex++;
       } else {
         // 数据位置
         if (dataIndex < dataSymbols.length) {
@@ -260,6 +286,11 @@ export class OFDMSymbolGenerator {
     }
 
     return data;
+  }
+
+  // 获取ZC导频序列（用于信道估计）
+  getZCSequence(): Complex[] {
+    return this.zcSequence;
   }
 }
 
@@ -360,12 +391,12 @@ export class ChannelEstimator {
   static leastSquaresLinear(
     receivedPilots: Complex[],
     pilotIndices: number[],
-    pilotPower: number,
+    transmittedPilots: Complex[],
     numSubcarriers: number
   ): Complex[] {
-    // 在导频位置估计信道
-    const channelAtPilots: Complex[] = receivedPilots.map(
-      pilot => new Complex(pilot.real / pilotPower, pilot.imag / pilotPower)
+    // 在导频位置估计信道（接收导频 / 发送导频）
+    const channelAtPilots: Complex[] = receivedPilots.map((pilot, i) => 
+      pilot.divide(transmittedPilots[i])
     );
 
     // 线性插值到所有子载波（直角坐标系）
@@ -410,12 +441,12 @@ export class ChannelEstimator {
   static leastSquaresPolar(
     receivedPilots: Complex[],
     pilotIndices: number[],
-    pilotPower: number,
+    transmittedPilots: Complex[],
     numSubcarriers: number
   ): Complex[] {
-    // 在导频位置估计信道
-    const channelAtPilots: Complex[] = receivedPilots.map(
-      pilot => new Complex(pilot.real / pilotPower, pilot.imag / pilotPower)
+    // 在导频位置估计信道（接收导频 / 发送导频）
+    const channelAtPilots: Complex[] = receivedPilots.map((pilot, i) => 
+      pilot.divide(transmittedPilots[i])
     );
 
     // 转换为极坐标
@@ -483,48 +514,21 @@ export class ChannelEstimator {
   static leastSquaresDFT(
     receivedPilots: Complex[],
     pilotIndices: number[],
-    pilotPower: number,
+    transmittedPilots: Complex[],
     numSubcarriers: number,
     threshold: number
   ): Complex[] {
-    // 在导频位置估计信道
-    const channelAtPilots: Complex[] = receivedPilots.map(
-      pilot => new Complex(pilot.real / pilotPower, pilot.imag / pilotPower)
-    );
+    // 初始化频域信道估计，全部置零
+    const channelEstimate: Complex[] = new Array(numSubcarriers).fill(new Complex(0, 0));
 
-    // 首先使用线性插值得到所有子载波的初始估计
-    const channelEstimate: Complex[] = new Array(numSubcarriers);
-
-    for (let i = 0; i < numSubcarriers; i++) {
-      // 找到最近的两个导频
-      let leftIdx = 0;
-      let rightIdx = pilotIndices.length - 1;
-
-      for (let j = 0; j < pilotIndices.length - 1; j++) {
-        if (pilotIndices[j] <= i && pilotIndices[j + 1] > i) {
-          leftIdx = j;
-          rightIdx = j + 1;
-          break;
-        }
-      }
-
-      if (i <= pilotIndices[0]) {
-        channelEstimate[i] = channelAtPilots[0];
-      } else if (i >= pilotIndices[pilotIndices.length - 1]) {
-        channelEstimate[i] = channelAtPilots[channelAtPilots.length - 1];
-      } else {
-        // 线性插值
-        const x1 = pilotIndices[leftIdx];
-        const x2 = pilotIndices[rightIdx];
-        const y1 = channelAtPilots[leftIdx];
-        const y2 = channelAtPilots[rightIdx];
-
-        const weight = (i - x1) / (x2 - x1);
-        channelEstimate[i] = new Complex(
-          y1.real + weight * (y2.real - y1.real),
-          y1.imag + weight * (y2.imag - y1.imag)
-        );
-      }
+    // 只在导频位置赋值信道估计值（接收导频 / 发送导频）
+    for (let i = 0; i < pilotIndices.length; i++) {
+      const pilotIdx = pilotIndices[i];
+      const received = receivedPilots[i];
+      const transmitted = transmittedPilots[i];
+      
+      // 信道估计 = 接收信号 / 发送信号
+      channelEstimate[pilotIdx] = received.divide(transmitted);
     }
 
     // DFT插值：IFFT到时延域，阈值处理，FFT回频域
@@ -546,7 +550,7 @@ export class ChannelEstimator {
   static estimate(
     receivedPilots: Complex[],
     pilotIndices: number[],
-    pilotPower: number,
+    transmittedPilots: Complex[],
     numSubcarriers: number,
     interpolationType: 'linear' | 'polar' | 'dft' = 'linear',
     dftThreshold?: number
@@ -555,7 +559,7 @@ export class ChannelEstimator {
       return ChannelEstimator.leastSquaresPolar(
         receivedPilots,
         pilotIndices,
-        pilotPower,
+        transmittedPilots,
         numSubcarriers
       );
     } else if (interpolationType === 'dft') {
@@ -563,7 +567,7 @@ export class ChannelEstimator {
       return ChannelEstimator.leastSquaresDFT(
         receivedPilots,
         pilotIndices,
-        pilotPower,
+        transmittedPilots,
         numSubcarriers,
         threshold
       );
@@ -571,7 +575,7 @@ export class ChannelEstimator {
       return ChannelEstimator.leastSquaresLinear(
         receivedPilots,
         pilotIndices,
-        pilotPower,
+        transmittedPilots,
         numSubcarriers
       );
     }

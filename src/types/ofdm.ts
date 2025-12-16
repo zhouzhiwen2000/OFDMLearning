@@ -21,16 +21,12 @@ export interface OFDMParameters {
 export interface MultipathParameters {
   useRandom: boolean; // 是否使用随机生成
   delaySpread: number; // 时延扩展（采样点）
-  numPaths: number; // 路径数量
-  path1Delay: number; // 路径1时延（整数，0-255）
-  path1Gain: number; // 路径1增益
-  path1Phase: number; // 路径1相位
-  path2Delay: number; // 路径2时延（整数，0-255）
-  path2Gain: number; // 路径2增益
-  path2Phase: number; // 路径2相位
-  path3Delay: number; // 路径3时延（整数，0-255）
-  path3Gain: number; // 路径3增益
-  path3Phase: number; // 路径3相位
+  numPaths: number; // 路径数量（1-5）
+  paths: Array<{
+    delay: number; // 时延（整数，0-255）
+    gain: number; // 增益（0-1）
+    phase: number; // 相位（弧度）
+  }>;
 }
 
 // 仿真结果

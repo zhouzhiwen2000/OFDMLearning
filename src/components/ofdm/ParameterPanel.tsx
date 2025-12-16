@@ -278,15 +278,36 @@ export function ParameterPanel({
                     </div>
                     <Slider
                       value={[multipathParams.numPaths]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, numPaths: value })
-                      }
-                      min={2}
+                      onValueChange={([value]) => {
+                        const newNumPaths = value;
+                        const currentPaths = [...multipathParams.paths];
+                        
+                        // 如果增加路径数，添加新路径
+                        while (currentPaths.length < newNumPaths) {
+                          currentPaths.push({
+                            delay: 0,
+                            gain: 0.1,
+                            phase: 0,
+                          });
+                        }
+                        
+                        // 如果减少路径数，删除多余路径
+                        while (currentPaths.length > newNumPaths) {
+                          currentPaths.pop();
+                        }
+                        
+                        onMultipathChange({
+                          ...multipathParams,
+                          numPaths: newNumPaths,
+                          paths: currentPaths,
+                        });
+                      }}
+                      min={1}
                       max={5}
                       step={1}
                       className="w-full"
                     />
-                    <p className="text-xs text-muted-foreground">范围: 2 - 5 条路径</p>
+                    <p className="text-xs text-muted-foreground">范围: 1 - 5 条路径</p>
                   </div>
 
                   <Button 
@@ -299,167 +320,66 @@ export function ParameterPanel({
                 </div>
 
                 {/* 手动配置路径参数 */}
-                {/* 路径1 */}
-                <div className="space-y-3 p-3 border border-border rounded-lg">
-                  <h4 className="font-medium text-sm">路径 1</h4>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">时延 (采样点)</Label>
-                      <span className="text-xs text-muted-foreground">{multipathParams.path1Delay}</span>
+                {multipathParams.paths.map((path, index) => (
+                  <div key={index} className="space-y-3 p-3 border border-border rounded-lg">
+                    <h4 className="font-medium text-sm">路径 {index + 1}</h4>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label className="text-xs">时延 (采样点)</Label>
+                        <span className="text-xs text-muted-foreground">{path.delay}</span>
+                      </div>
+                      <Slider
+                        value={[path.delay]}
+                        onValueChange={([value]) => {
+                          const newPaths = [...multipathParams.paths];
+                          newPaths[index] = { ...newPaths[index], delay: Math.round(value) };
+                          onMultipathChange({ ...multipathParams, paths: newPaths });
+                        }}
+                        min={0}
+                        max={255}
+                        step={1}
+                      />
+                      <p className="text-xs text-muted-foreground">范围: 0 - 255</p>
                     </div>
-                    <Slider
-                      value={[multipathParams.path1Delay]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path1Delay: Math.round(value) })
-                      }
-                      min={0}
-                      max={255}
-                      step={1}
-                    />
-                    <p className="text-xs text-muted-foreground">范围: 0 - 255</p>
-                  </div>
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">增益</Label>
-                      <span className="text-xs text-muted-foreground">{multipathParams.path1Gain.toFixed(2)}</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label className="text-xs">增益</Label>
+                        <span className="text-xs text-muted-foreground">{path.gain.toFixed(2)}</span>
+                      </div>
+                      <Slider
+                        value={[path.gain]}
+                        onValueChange={([value]) => {
+                          const newPaths = [...multipathParams.paths];
+                          newPaths[index] = { ...newPaths[index], gain: value };
+                          onMultipathChange({ ...multipathParams, paths: newPaths });
+                        }}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                      />
                     </div>
-                    <Slider
-                      value={[multipathParams.path1Gain]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path1Gain: value })
-                      }
-                      min={0}
-                      max={1}
-                      step={0.05}
-                    />
-                  </div>
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">相位 (度)</Label>
-                      <span className="text-xs text-muted-foreground">{Math.round((multipathParams.path1Phase * 180) / Math.PI)}</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label className="text-xs">相位 (度)</Label>
+                        <span className="text-xs text-muted-foreground">{Math.round((path.phase * 180) / Math.PI)}</span>
+                      </div>
+                      <Slider
+                        value={[(path.phase * 180) / Math.PI]}
+                        onValueChange={([value]) => {
+                          const newPaths = [...multipathParams.paths];
+                          newPaths[index] = { ...newPaths[index], phase: (value * Math.PI) / 180 };
+                          onMultipathChange({ ...multipathParams, paths: newPaths });
+                        }}
+                        min={0}
+                        max={360}
+                        step={15}
+                      />
                     </div>
-                    <Slider
-                      value={[(multipathParams.path1Phase * 180) / Math.PI]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path1Phase: (value * Math.PI) / 180 })
-                      }
-                      min={0}
-                      max={360}
-                      step={15}
-                    />
                   </div>
-                </div>
-
-                {/* 路径2 */}
-                <div className="space-y-3 p-3 border border-border rounded-lg">
-                  <h4 className="font-medium text-sm">路径 2</h4>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">时延 (采样点)</Label>
-                      <span className="text-xs text-muted-foreground">{multipathParams.path2Delay}</span>
-                    </div>
-                    <Slider
-                      value={[multipathParams.path2Delay]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path2Delay: Math.round(value) })
-                      }
-                      min={0}
-                      max={255}
-                      step={1}
-                    />
-                    <p className="text-xs text-muted-foreground">范围: 0 - 255</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">增益</Label>
-                      <span className="text-xs text-muted-foreground">{multipathParams.path2Gain.toFixed(2)}</span>
-                    </div>
-                    <Slider
-                      value={[multipathParams.path2Gain]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path2Gain: value })
-                      }
-                      min={0}
-                      max={1}
-                      step={0.05}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">相位 (度)</Label>
-                      <span className="text-xs text-muted-foreground">{Math.round((multipathParams.path2Phase * 180) / Math.PI)}</span>
-                    </div>
-                    <Slider
-                      value={[(multipathParams.path2Phase * 180) / Math.PI]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path2Phase: (value * Math.PI) / 180 })
-                      }
-                      min={0}
-                      max={360}
-                      step={15}
-                    />
-                  </div>
-                </div>
-
-                {/* 路径3 */}
-                <div className="space-y-3 p-3 border border-border rounded-lg">
-                  <h4 className="font-medium text-sm">路径 3</h4>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">时延 (采样点)</Label>
-                      <span className="text-xs text-muted-foreground">{multipathParams.path3Delay}</span>
-                    </div>
-                    <Slider
-                      value={[multipathParams.path3Delay]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path3Delay: Math.round(value) })
-                      }
-                      min={0}
-                      max={255}
-                      step={1}
-                    />
-                    <p className="text-xs text-muted-foreground">范围: 0 - 255</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">增益</Label>
-                      <span className="text-xs text-muted-foreground">{multipathParams.path3Gain.toFixed(2)}</span>
-                    </div>
-                    <Slider
-                      value={[multipathParams.path3Gain]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path3Gain: value })
-                      }
-                      min={0}
-                      max={1}
-                      step={0.05}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label className="text-xs">相位 (度)</Label>
-                      <span className="text-xs text-muted-foreground">{Math.round((multipathParams.path3Phase * 180) / Math.PI)}</span>
-                    </div>
-                    <Slider
-                      value={[(multipathParams.path3Phase * 180) / Math.PI]}
-                      onValueChange={([value]) =>
-                        onMultipathChange({ ...multipathParams, path3Phase: (value * Math.PI) / 180 })
-                      }
-                      min={0}
-                      max={360}
-                      step={15}
-                    />
-                  </div>
-                </div>
+                ))}
               </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
